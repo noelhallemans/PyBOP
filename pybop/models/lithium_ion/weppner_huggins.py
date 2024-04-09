@@ -36,11 +36,7 @@ class BaseWeppnerHuggins(pybamm.lithium_ion.BaseModel):
         # `ParameterValues` class when the model is processed.
         self.options["working electrode"] = "positive"
 
-        t = pybamm.t
-        ######################
         # Parameters
-        ######################
-
         d_s = pybamm.Parameter("Positive electrode diffusivity [m2.s-1]")
 
         c_s_max = pybamm.Parameter(
@@ -49,9 +45,7 @@ class BaseWeppnerHuggins(pybamm.lithium_ion.BaseModel):
 
         i_app = self.param.current_density_with_time
 
-        U = pybamm.Parameter("Reference OCP [V]")
-
-        U_prime = pybamm.Parameter("Derivative of the OCP wrt stoichiometry [V]")
+        u_prime = pybamm.Parameter("Derivative of the OCP wrt stoichiometry [V]")
 
         epsilon = pybamm.Parameter("Positive electrode active material volume fraction")
 
@@ -59,24 +53,19 @@ class BaseWeppnerHuggins(pybamm.lithium_ion.BaseModel):
 
         a = 3 * (epsilon / r_particle)
 
-        l_w = self.param.p.L
-
-        ######################
         # Governing equations
-        ######################
         u_surf = (
             (2 / (np.pi**0.5))
-            * (i_app / ((d_s**0.5) * a * self.param.F * l_w))
-            * (t**0.5)
+            * (i_app / ((d_s**0.5) * a * self.param.F * self.param.p.L))
+            * (pybamm.t**0.5)
         )
         # Linearised voltage
-        V = U + (U_prime * u_surf) / c_s_max
-        ######################
-        # (Some) variables
-        ######################
+        V = pybamm.Parameter("Reference OCP [V]") + (u_prime * u_surf) / c_s_max
+
+        # Variables
         self.variables = {
             "Voltage [V]": V,
-            "Time [s]": t,
+            "Time [s]": pybamm.t,
         }
 
     @property

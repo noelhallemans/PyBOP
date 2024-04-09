@@ -23,6 +23,16 @@ dataset = pybop.Dataset(
     }
 )
 
+# Define diffusion parameter for fitting
+parameters = [
+    pybop.Parameter(
+        "Positive electrode diffusivity [m2.s-1]",
+        prior=pybop.Gaussian(5e-14, 1e-13),
+        bounds=[1e-16, 1e-11],
+        true_value=parameter_set["Positive electrode diffusivity [m2.s-1]"],
+    ),
+]
+
 # Define parameter set
 parameter_set.update(
     {
@@ -32,9 +42,12 @@ parameter_set.update(
     check_already_exists=False,
 )
 
+# Weppner & Huggins model
+wep_huggins_model = pybop.lithium_ion.WeppnerHuggins(parameter_set=parameter_set)
+
 # Define the cost to optimise
-problem = pybop.GITT(
-    model="Weppner & Huggins", parameter_set=parameter_set, dataset=dataset
+problem = pybop.FittingProblem(
+    model=wep_huggins_model, parameters=parameters, dataset=dataset
 )
 cost = pybop.RootMeanSquaredError(problem)
 
