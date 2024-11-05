@@ -1,45 +1,24 @@
 import numpy as np
+from pybamm import Parameter
 
 import pybop
 
 # Import the ECM parameter set from JSON
-parameter_set = pybop.ParameterSet(
-    json_path="examples/scripts/parameters/initial_ecm_parameters.json"
+parameter_set = pybop.ParameterSet.pybamm("ECM_Example")
+
+# Add Tau as a Parameter
+parameter_set.update(
+    {
+        "Tau1": 0.0,
+        "Tau2": 0.0,
+        "Element-2 initial overpotential [V]": 0,
+        "R2 [Ohm]": Parameter("Tau2") / Parameter("C2 [F]") + 1e-30,
+        "C1 [F]": 500,
+        "R1 [Ohm]": Parameter("Tau1") / Parameter("C1 [F]") + np.finfo(float).eps,
+        "C2 [F]": 5000,
+    },
+    check_already_exists=False,
 )
-parameter_set.import_parameters()
-
-# Alternatively, define the initial parameter set with a dictionary
-# Add definitions for R's, C's, and initial overpotentials for any additional RC elements
-# parameter_set = pybop.ParameterSet(
-#     params_dict={
-#         "chemistry": "ecm",
-#         "Initial SoC": 0.5,
-#         "Initial temperature [K]": 25 + 273.15,
-#         "Cell capacity [A.h]": 5,
-#         "Nominal cell capacity [A.h]": 5,
-#         "Ambient temperature [K]": 25 + 273.15,
-#         "Current function [A]": 5,
-#         "Upper voltage cut-off [V]": 4.2,
-#         "Lower voltage cut-off [V]": 3.0,
-#         "Cell thermal mass [J/K]": 1000,
-#         "Cell-jig heat transfer coefficient [W/K]": 10,
-#         "Jig thermal mass [J/K]": 500,
-#         "Jig-air heat transfer coefficient [W/K]": 10,
-#         "Open-circuit voltage [V]": pybop.empirical.Thevenin().default_parameter_values[
-#             "Open-circuit voltage [V]"
-#         ],
-#         "R0 [Ohm]": 0.001,
-#         "Element-1 initial overpotential [V]": 0,
-#         "Element-2 initial overpotential [V]": 0,
-#         "R1 [Ohm]": 0.0002,
-#         "R2 [Ohm]": 0.0003,
-#         "C1 [F]": 10000,
-#         "C2 [F]": 5000,
-#         "Entropic change [V/K]": 0.0004,
-#     }
-# )
-
-# Define the model
 model = pybop.empirical.Thevenin(
     parameter_set=parameter_set, options={"number of rc elements": 2}
 )
@@ -47,16 +26,17 @@ model = pybop.empirical.Thevenin(
 # Fitting parameters
 parameters = pybop.Parameters(
     pybop.Parameter(
-        "R0 [Ohm]",
-        prior=pybop.Gaussian(0.0002, 0.0001),
-        bounds=[1e-4, 1e-2],
+        "Tau1",
+        prior=pybop.Gaussian(1e-3, 2e-4),
+        bounds=[1e-4, 1e-1],
     ),
     pybop.Parameter(
-        "R1 [Ohm]",
-        prior=pybop.Gaussian(0.0001, 0.0001),
-        bounds=[1e-5, 1e-2],
+        "Tau2",
+        prior=pybop.Gaussian(0.12, 0.02),
+        bounds=[1e-5, 0.1],
     ),
 )
+
 
 sigma = 0.001
 t_eval = np.arange(0, 900, 3)
@@ -80,9 +60,9 @@ optim = pybop.CMAES(cost, max_iterations=100)
 results = optim.run()
 
 # Export the parameters to JSON
-parameter_set.export_parameters(
-    "examples/scripts/parameters/fit_ecm_parameters.json", fit_params=parameters
-)
+# parameter_set.export_parameters(
+#     "examples/scripts/parameters/fit_ecm_parameters.json", fit_params=parameters
+# )
 
 # Plot the time series
 pybop.plot.dataset(dataset)
